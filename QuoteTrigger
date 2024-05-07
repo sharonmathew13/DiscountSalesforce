@@ -1,0 +1,7 @@
+trigger QuoteTrigger on Quote (before insert,before update,after insert,after update) {
+
+    if(trigger.isbefore && ( trigger.isupdate))
+    {
+        quoteHandler.quoteTrigger(trigger.new);
+    }
+}
