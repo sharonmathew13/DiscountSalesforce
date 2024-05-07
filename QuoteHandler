@@ -1,0 +1,77 @@
+public class QuoteHandler {
+
+    public static void quoteTrigger(List<Quote> quoteList) {
+        Set<Id> quoteIds = new Set<Id>();
+        Map<Id, Decimal> industrialPrinterDiscountMap = new Map<Id, Decimal>();
+        Map<Id, Decimal> sparePartsDiscountMap = new Map<Id, Decimal>();
+        Map<Id, Decimal> inkDiscountMap = new Map<Id, Decimal>();
+        
+        for (Quote quote : quoteList) {
+            quoteIds.add(quote.Id);
+            system.debug(quote);
+        }
+
+        Map<Id, List<QuoteLineItem>> quoteLineItemMap = new Map<Id, List<QuoteLineItem>>();
+        for (QuoteLineItem qli : [SELECT QuoteId, Discount, TotalPrice, Subtotal, Product2.ProductCode, Product2.Family
+                                  FROM QuoteLineItem 
+                                  WHERE QuoteId IN :quoteIds]) {
+            if (!quoteLineItemMap.containsKey(qli.QuoteId)) {
+                quoteLineItemMap.put(qli.QuoteId, new List<QuoteLineItem>());
+            }
+            quoteLineItemMap.get(qli.QuoteId).add(qli);
+        }
+        system.debug(quoteLineItemMap);
+        for (Quote quote : quoteList) {
+            List<QuoteLineItem> quoteLineItems = quoteLineItemMap.get(quote.Id);
+            if (quoteLineItems != null && !quoteLineItems.isEmpty()) {
+               
+                Decimal subTotal = 0.0;
+                Decimal subTotal2 = 0.0;
+                Decimal subTotal1 = 0.0;
+                Decimal industrialPrinterDiscount = 0.0;
+                Decimal sparePartsDiscount = 0.0;
+                Decimal inkDiscount = 0.0;
+                for (QuoteLineItem qli : quoteLineItems) {
+                   
+                    
+
+                    if (qli.Product2 != null && qli.Product2.Family == 'Industrial Printers') {
+                        industrialPrinterDiscount += qli.TotalPrice;
+                        subTotal += qli.Subtotal;
+                    } else if (qli.Product2 != null && qli.Product2.Family == 'Spare Parts') {
+                        sparePartsDiscount += qli.TotalPrice;
+                        subTotal1 += qli.Subtotal;
+                       
+                    }
+                    else if (qli.Product2 != null && qli.Product2.Family == 'Ink') {
+                        inkDiscount += qli.TotalPrice;
+                        subTotal2 += qli.Subtotal;
+                    }
+                }
+                system.debug(subtotal1);
+                if (subTotal1 != 0) {
+                    //industrialPrinterDiscountMap.put(quote.Id, ((subTotal-industrialPrinterDiscount) / subTotal) * 100);
+                    sparePartsDiscountMap.put(quote.Id, ((subTotal1-sparePartsDiscount) / subTotal1) * 100);
+                    // inkDiscountMap.put(quote.Id, ((subTotal2-inkDiscount) / subTotal2) * 100);
+                }
+                if (subTotal != 0) {
+                    industrialPrinterDiscountMap.put(quote.Id, ((subTotal-industrialPrinterDiscount) / subTotal) * 100);
+                    //sparePartsDiscountMap.put(quote.Id, ((subTotal1-sparePartsDiscount) / subTotal1) * 100);
+                    // inkDiscountMap.put(quote.Id, ((subTotal2-inkDiscount) / subTotal2) * 100);
+                }
+                if (subTotal2 != 0) {
+                    //industrialPrinterDiscountMap.put(quote.Id, ((subTotal-industrialPrinterDiscount) / subTotal) * 100);
+                    //sparePartsDiscountMap.put(quote.Id, ((subTotal1-sparePartsDiscount) / subTotal1) * 100);
+                    inkDiscountMap.put(quote.Id, ((subTotal2-inkDiscount) / subTotal2) * 100);
+                }
+            }
+        }
+        system.debug(sparePartsDiscountMap);
+        for (Quote quote : quoteList) {
+            quote.dis__c = industrialPrinterDiscountMap.get(quote.Id);
+            quote.sparePartsDis__c = sparePartsDiscountMap.get(quote.Id);
+            quote.inkDis__c = inkDiscountMap.get(quote.Id);
+            System.debug('Industrial Printer Discount: ' + quote.dis__c + ', Spare Parts Discount: ' + quote.sparePartsDis__c);
+        }
+    }
+}
